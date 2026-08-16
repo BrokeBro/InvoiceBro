@@ -1,0 +1,19 @@
+rules_version = '2';
+
+// InvoiceBro locks the client SDK out of Firestore entirely.
+//
+// Every read and write goes through the Next.js server using the Admin SDK,
+// which bypasses these rules. Tenancy is enforced there by requireOrg() in
+// src/lib/auth.ts, where it can be reasoned about and tested as ordinary code
+// rather than spread across rule expressions.
+//
+// So this file is defence in depth: if a browser ever reaches Firestore
+// directly — through a bug, a leaked config, or a future refactor — it gets
+// nothing. Anything that needs data must go through the server.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

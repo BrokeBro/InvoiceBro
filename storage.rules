@@ -1,0 +1,14 @@
+rules_version = '2';
+
+// Same posture as firestore.rules: no direct client access.
+//
+// Logo uploads are posted to the Next.js server, which validates the file and
+// writes it with the Admin SDK. Logos are read back through short-lived signed
+// URLs, so the bucket itself never needs to be public.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

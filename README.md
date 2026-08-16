@@ -108,6 +108,24 @@ Deploy the rules once, from the Firebase console or the CLI:
 firebase deploy --only firestore:rules,storage:rules
 ```
 
+## Verifying against live Firebase
+
+```bash
+npm run smoke
+```
+
+Drives every server-side path against the real Firestore project using the
+application's own modules — not reimplementations, so a failure here is a real
+failure in shipped code. It covers connectivity and org bootstrap, the tenancy
+boundary (including the negative case: a non-member must be refused), the
+client/invoice round-trip, derived status transitions, mixed-rate tax
+arithmetic, concurrent invoice-number reservation, and PDF rendering from live
+data. It creates a throwaway org and deletes everything afterwards, including on
+failure.
+
+Google sign-in itself needs a browser and a real Google account, so it's the one
+thing the script can't cover. Run `npm run dev` and sign in to exercise it.
+
 ## Working on the PDF templates
 
 ```bash

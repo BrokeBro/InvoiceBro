@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "pdf:preview": "tsx scripts/preview-pdf.tsx",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "smoke": "tsx --env-file=.env.local scripts/smoke.ts"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.6.1",

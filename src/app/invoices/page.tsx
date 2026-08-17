@@ -23,7 +23,7 @@ export default async function InvoicesPage() {
 
   return (
     <AppShell org={org} user={user} current="/invoices">
-      <div className="mb-6 flex items-end justify-between">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Invoices</h1>
           <p className="mt-1 text-sm text-slate-500">
@@ -39,7 +39,7 @@ export default async function InvoicesPage() {
         {clients.length > 0 ? (
           <Link
             href="/invoices/new"
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+            className="flex min-h-11 items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 sm:w-auto"
           >
             New invoice
           </Link>
@@ -59,7 +59,43 @@ export default async function InvoicesPage() {
           action={{ href: "/invoices/new", label: "New invoice" }}
         />
       ) : (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <>
+          {/* Cards below sm. A six-column table on a 390px screen either
+              overflows horizontally or squeezes every column to unreadable —
+              the same data reads better stacked. */}
+          <ul className="space-y-2 sm:hidden">
+            {invoices.map((invoice) => (
+              <li key={invoice.id}>
+                <Link
+                  href={`/invoices/${invoice.id}`}
+                  className="block rounded-xl border border-slate-200 bg-white p-4 active:bg-slate-50"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-slate-900">
+                        {invoice.client.name}
+                      </p>
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        {invoice.number ?? "Draft"} · due {formatDate(invoice.dueDate)}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="font-medium tabular-nums text-slate-900">
+                        {formatMoney(invoice.totalCents, invoice.currency)}
+                      </p>
+                      <span
+                        className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${STATUS_STYLES[invoice.status]}`}
+                      >
+                        {STATUS_LABELS[invoice.status]}
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+
+          <div className="hidden overflow-hidden rounded-xl border border-slate-200 bg-white sm:block">
           <table className="w-full text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-left">
               <tr className="text-xs uppercase tracking-wide text-slate-500">
@@ -99,7 +135,8 @@ export default async function InvoicesPage() {
               ))}
             </tbody>
           </table>
-        </div>
+          </div>
+        </>
       )}
     </AppShell>
   );

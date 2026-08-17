@@ -65,12 +65,16 @@ export async function saveInvoice(
 
   // Snapshot the client onto the invoice. Editing a client's address later must
   // never rewrite an invoice that has already been issued.
+  // vatRegistered rides along in the snapshot for the same reason as the rest:
+  // un-registering a client next year must not retroactively strip the VAT
+  // number from invoices already issued and sent.
   const clientSnapshot: ClientSnapshot = {
     id: client.id,
     name: client.name,
     email: client.email,
     address: client.address,
-    vatNumber: client.vatNumber,
+    vatRegistered: client.vatRegistered,
+    vatNumber: client.vatRegistered ? client.vatNumber : "",
   };
 
   const lineItems: LineItem[] = input.lineItems;

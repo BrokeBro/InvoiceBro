@@ -146,6 +146,11 @@ export function MinimalTemplate({
             <Text style={styles.strong}>{invoice.client.name}</Text>
             {invoice.client.address ? <Text>{invoice.client.address}</Text> : null}
             {invoice.client.email ? <Text>{invoice.client.email}</Text> : null}
+            {/* Only when they are actually VAT registered — an unregistered
+                client has no number to show under their address. */}
+            {invoice.client.vatRegistered && invoice.client.vatNumber ? (
+              <Text>VAT {invoice.client.vatNumber}</Text>
+            ) : null}
           </View>
           <View style={styles.metaColumn}>
             <Text style={styles.label}>ISSUED</Text>

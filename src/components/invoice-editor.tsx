@@ -20,7 +20,23 @@ type EditorRow = {
   taxRatePercent: string;
 };
 
-function rowsFromInvoice(invoice: Invoice | null, org: Organization): EditorRow[] {
+/**
+ * The tax rate to apply for a client.
+ *
+ * `null` on the client means "no override, use the org default". That is
+ * deliberately distinct from `0`, which is an explicit zero-rating — a charity
+ * set to 0% must stay at 0% even if the org default later changes, so `??`
+ * rather than `||` is doing real work here.
+ */
+function rateForClient(client: Client | undefined, org: Organization): number {
+  return client?.taxRatePercent ?? org.defaults.taxRatePercent;
+}
+
+function rowsFromInvoice(
+  invoice: Invoice | null,
+  org: Organization,
+  client: Client | undefined,
+): EditorRow[] {
   if (!invoice || invoice.lineItems.length === 0) {
     return [
       {
@@ -28,7 +44,7 @@ function rowsFromInvoice(invoice: Invoice | null, org: Organization): EditorRow[
         description: "",
         quantity: "1",
         price: "0.00",
-        taxRatePercent: String(org.defaults.taxRatePercent),
+        taxRatePercent: String(rateForClient(client, org)),
       },
     ];
   }
@@ -68,7 +84,12 @@ export function InvoiceEditor({
   const [templateOverride, setTemplateOverride] = useState<TemplateId | "">(
     invoice?.templateOverride ?? "",
   );
-  const [rows, setRows] = useState<EditorRow[]>(() => rowsFromInvoice(invoice, organization));
+  const selectedClient = clients.find((candidate) => candidate.id === clientId);
+  const clientRate = rateForClient(selectedClient, organization);
+
+  const [rows, setRows] = useState<EditorRow[]>(() =>
+    rowsFromInvoice(invoice, organization, clients.find((c) => c.id === (invoice?.client.id ?? clients[0]?.id))),
+  );
 
   // Totals use the exact same computeTotals() the server uses, so the figures
   // on screen can never disagree with the figures in the PDF.
@@ -99,9 +120,34 @@ export function InvoiceEditor({
         description: "",
         quantity: "1",
         price: "0.00",
-        taxRatePercent: String(organization.defaults.taxRatePercent),
+        taxRatePercent: String(clientRate),
       },
     ]);
+  }
+
+  /**
+   * Switching client re-rates the lines.
+   *
+   * Only lines still carrying the previous client's rate are touched — a line
+   * deliberately set to something else (a mixed-rate invoice) keeps its value,
+   * because silently overwriting a hand-entered rate would be worse than
+   * leaving one stale.
+   */
+  function changeClient(nextClientId: string) {
+    const previousRate = String(clientRate);
+    const nextRate = String(
+      rateForClient(
+        clients.find((candidate) => candidate.id === nextClientId),
+        organization,
+      ),
+    );
+
+    setClientId(nextClientId);
+    setRows((current) =>
+      current.map((row) =>
+        row.taxRatePercent === previousRate ? { ...row, taxRatePercent: nextRate } : row,
+      ),
+    );
   }
 
   function removeRow(key: string) {
@@ -166,12 +212,12 @@ export function InvoiceEditor({
         <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
       ) : null}
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Client">
             <select
               value={clientId}
-              onChange={(event) => setClientId(event.target.value)}
+              onChange={(event) => changeClient(event.target.value)}
               className={inputClass}
             >
               {clients.map((client) => (
@@ -180,6 +226,14 @@ export function InvoiceEditor({
                 </option>
               ))}
             </select>
+            <p className="mt-1.5 text-xs text-slate-500">
+              {selectedClient?.taxRatePercent === null || selectedClient === undefined
+                ? `Tax ${clientRate}% (your default)`
+                : `Tax ${clientRate}% (set on this client)`}
+              {selectedClient && !selectedClient.vatRegistered
+                ? " · not VAT registered"
+                : ""}
+            </p>
           </Field>
 
           <Field label="Issue date">
@@ -223,11 +277,16 @@ export function InvoiceEditor({
         </div>
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
         <h2 className="mb-4 text-sm font-semibold text-slate-900">Line items</h2>
 
-        <div className="space-y-2">
-          <div className="hidden gap-2 px-1 text-xs font-medium uppercase tracking-wide text-slate-500 sm:grid sm:grid-cols-[1fr_80px_120px_80px_100px_32px]">
+        {/* Two layouts, one source of data.
+            Below sm: a labelled card per line — the columns are far too narrow
+            for a phone, and stacking them unlabelled leaves four anonymous
+            number boxes with no way to tell qty from tax.
+            From sm up: the compact spreadsheet-style grid. */}
+        <div className="space-y-3 sm:space-y-2">
+          <div className="hidden gap-2 px-1 text-xs font-medium uppercase tracking-wide text-slate-500 sm:grid sm:grid-cols-[1fr_80px_120px_80px_100px_36px]">
             <span>Description</span>
             <span className="text-right">Qty</span>
             <span className="text-right">Unit price</span>
@@ -236,54 +295,92 @@ export function InvoiceEditor({
             <span />
           </div>
 
-          {rows.map((row) => {
+          {rows.map((row, index) => {
             const amount =
               (parseMoneyToCents(row.price) ?? 0) * (Number(row.quantity) || 0);
 
             return (
               <div
                 key={row.key}
-                className="grid gap-2 sm:grid-cols-[1fr_80px_120px_80px_100px_32px] sm:items-center"
+                className="rounded-xl border border-slate-200 p-3 sm:grid sm:grid-cols-[1fr_80px_120px_80px_100px_36px] sm:items-center sm:gap-2 sm:rounded-none sm:border-0 sm:p-0"
               >
-                <input
-                  value={row.description}
-                  onChange={(event) => updateRow(row.key, { description: event.target.value })}
-                  placeholder="What are you billing for?"
-                  className={inputClass}
-                />
-                <input
-                  value={row.quantity}
-                  inputMode="decimal"
-                  onChange={(event) => updateRow(row.key, { quantity: event.target.value })}
-                  className={`${inputClass} sm:text-right`}
-                />
-                <input
-                  value={row.price}
-                  inputMode="decimal"
-                  onChange={(event) => updateRow(row.key, { price: event.target.value })}
-                  onBlur={(event) => {
-                    const cents = parseMoneyToCents(event.target.value);
-                    updateRow(row.key, { price: cents === null ? "0.00" : centsToInput(cents) });
-                  }}
-                  className={`${inputClass} sm:text-right`}
-                />
-                <input
-                  value={row.taxRatePercent}
-                  inputMode="decimal"
-                  onChange={(event) =>
-                    updateRow(row.key, { taxRatePercent: event.target.value })
-                  }
-                  className={`${inputClass} sm:text-right`}
-                />
-                <span className="px-1 text-right text-sm tabular-nums text-slate-700">
-                  {money(Math.round(amount))}
-                </span>
+                <div className="mb-2 flex items-center justify-between sm:hidden">
+                  <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                    Line {index + 1}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeRow(row.key)}
+                    disabled={rows.length === 1}
+                    className="-mr-1 min-h-9 rounded-md px-2 text-xs font-medium text-slate-500 transition hover:text-red-600 disabled:opacity-30"
+                  >
+                    Remove
+                  </button>
+                </div>
+
+                <MobileLabel text="Description">
+                  <input
+                    value={row.description}
+                    onChange={(event) =>
+                      updateRow(row.key, { description: event.target.value })
+                    }
+                    placeholder="What are you billing for?"
+                    className={inputClass}
+                  />
+                </MobileLabel>
+
+                <div className="mt-2 grid grid-cols-3 gap-2 sm:contents">
+                  <MobileLabel text="Qty">
+                    <input
+                      value={row.quantity}
+                      inputMode="decimal"
+                      onChange={(event) =>
+                        updateRow(row.key, { quantity: event.target.value })
+                      }
+                      className={`${inputClass} sm:text-right`}
+                    />
+                  </MobileLabel>
+
+                  <MobileLabel text="Unit price">
+                    <input
+                      value={row.price}
+                      inputMode="decimal"
+                      onChange={(event) => updateRow(row.key, { price: event.target.value })}
+                      onBlur={(event) => {
+                        const cents = parseMoneyToCents(event.target.value);
+                        updateRow(row.key, {
+                          price: cents === null ? "0.00" : centsToInput(cents),
+                        });
+                      }}
+                      className={`${inputClass} sm:text-right`}
+                    />
+                  </MobileLabel>
+
+                  <MobileLabel text="Tax %">
+                    <input
+                      value={row.taxRatePercent}
+                      inputMode="decimal"
+                      onChange={(event) =>
+                        updateRow(row.key, { taxRatePercent: event.target.value })
+                      }
+                      className={`${inputClass} sm:text-right`}
+                    />
+                  </MobileLabel>
+                </div>
+
+                <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2 sm:mt-0 sm:block sm:border-0 sm:pt-0">
+                  <span className="text-xs text-slate-500 sm:hidden">Amount</span>
+                  <span className="text-right text-sm font-medium tabular-nums text-slate-900 sm:block sm:px-1 sm:font-normal sm:text-slate-700">
+                    {money(Math.round(amount))}
+                  </span>
+                </div>
+
                 <button
                   type="button"
                   onClick={() => removeRow(row.key)}
                   disabled={rows.length === 1}
                   aria-label="Remove line"
-                  className="rounded-md px-2 py-1 text-slate-400 transition hover:bg-slate-100 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30"
+                  className="hidden rounded-md px-2 py-1 text-slate-400 transition hover:bg-slate-100 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30 sm:block"
                 >
                   ×
                 </button>
@@ -295,13 +392,13 @@ export function InvoiceEditor({
         <button
           type="button"
           onClick={addRow}
-          className="mt-4 rounded-lg border border-dashed border-slate-300 px-3 py-1.5 text-sm text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
+          className="mt-4 min-h-11 w-full rounded-lg border border-dashed border-slate-300 px-3 py-2.5 text-sm font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-900 sm:w-auto sm:py-1.5"
         >
           + Add line
         </button>
 
         <div className="mt-6 flex justify-end">
-          <dl className="w-full max-w-xs space-y-1.5 text-sm">
+          <dl className="w-full space-y-1.5 text-sm sm:max-w-xs">
             <div className="flex justify-between">
               <dt className="text-slate-500">Subtotal</dt>
               <dd className="tabular-nums">{money(totals.subtotalCents)}</dd>
@@ -318,7 +415,7 @@ export function InvoiceEditor({
         </div>
       </section>
 
-      <section className="grid gap-4 rounded-xl border border-slate-200 bg-white p-5 sm:grid-cols-2">
+      <section className="grid gap-4 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2 sm:p-5">
         <Field label="Notes (shown on the invoice)">
           <textarea
             value={notes}
@@ -355,19 +452,23 @@ export function InvoiceEditor({
         </Field>
       </section>
 
-      <div className="flex items-center gap-3">
+      {/* Sticky on mobile so Save is always reachable without scrolling past a
+          long list of line items.
+          bottom-14 clears the fixed bottom nav (~56px) — at bottom-0 the two
+          bars stack on top of each other and the nav wins, hiding Save. */}
+      <div className="sticky bottom-14 -mx-4 flex flex-row-reverse items-center gap-2 border-t border-slate-200 bg-slate-50/95 px-4 py-3 backdrop-blur sm:static sm:bottom-auto sm:mx-0 sm:flex-row sm:gap-3 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:backdrop-blur-none">
         <button
           type="button"
           onClick={submit}
           disabled={pending}
-          className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-60"
+          className="min-h-11 flex-1 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-60 sm:flex-none sm:py-2"
         >
           {pending ? "Saving…" : invoice ? "Save changes" : "Create invoice"}
         </button>
         <button
           type="button"
           onClick={() => router.back()}
-          className="rounded-lg px-4 py-2 text-sm text-slate-600 transition hover:text-slate-900"
+          className="min-h-11 shrink-0 rounded-lg px-4 py-2.5 text-sm text-slate-600 transition hover:text-slate-900 sm:py-2"
         >
           Cancel
         </button>
@@ -376,8 +477,28 @@ export function InvoiceEditor({
   );
 }
 
+// text-base (16px) on mobile is deliberate: iOS Safari zooms the whole page
+// when a focused input is smaller than 16px, which is jarring and leaves the
+// layout shifted. sm:text-sm restores the tighter desktop scale.
+// min-h-11 keeps every control at a comfortable ~44px tap target.
 const inputClass =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
+  "w-full min-h-11 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:min-h-0 sm:py-2 sm:text-sm";
+
+/**
+ * Wraps a control with a label that only shows below `sm`.
+ *
+ * Above `sm` the grid has a single header row, so per-field labels would be
+ * redundant; `sm:contents` makes the wrapper vanish from the layout entirely so
+ * the input becomes a direct grid child and lines up with that header.
+ */
+function MobileLabel({ text, children }: { text: string; children: React.ReactNode }) {
+  return (
+    <label className="block sm:contents">
+      <span className="mb-1 block text-xs text-slate-500 sm:hidden">{text}</span>
+      {children}
+    </label>
+  );
+}
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (

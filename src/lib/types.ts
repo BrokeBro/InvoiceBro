@@ -46,7 +46,23 @@ export type Client = {
   name: string;
   email: string;
   address: string;
+  /**
+   * Whether this client is VAT registered.
+   *
+   * Deliberately independent of `taxRatePercent`. Registration is about whether
+   * *they* have a VAT number to print under their address; the rate is what
+   * *you* charge them. A VAT-registered business still bills an unregistered
+   * consumer at the standard rate, and a charity may be zero-rated without
+   * having a number — so tying the two together would get both cases wrong.
+   */
+  vatRegistered: boolean;
   vatNumber: string;
+  /**
+   * Default tax rate for this client, overriding the organization default.
+   * `null` means "use the org default" — distinct from `0`, which is an
+   * explicit zero-rating for charities, exports and the like.
+   */
+  taxRatePercent: number | null;
   currency: string;
   archived: boolean;
   createdAt: string;
@@ -58,6 +74,7 @@ export type ClientSnapshot = {
   name: string;
   email: string;
   address: string;
+  vatRegistered: boolean;
   vatNumber: string;
 };
 

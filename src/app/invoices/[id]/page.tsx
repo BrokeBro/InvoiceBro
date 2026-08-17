@@ -28,7 +28,7 @@ export default async function InvoiceDetailPage({
 
   return (
     <AppShell org={org} user={user} current="/invoices">
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+      <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:flex-wrap">
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-semibold">{invoice.number ?? "Draft invoice"}</h1>
@@ -48,8 +48,34 @@ export default async function InvoiceDetailPage({
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
+          {/* Line items as cards below sm — see the invoices list for why. */}
+          <ul className="space-y-2 sm:hidden">
+            {invoice.lineItems.map((item, index) => (
+              <li key={index} className="rounded-xl border border-slate-200 bg-white p-4">
+                <p className="font-medium text-slate-900">{item.description}</p>
+                <dl className="mt-2 grid grid-cols-3 gap-2 text-xs">
+                  <div>
+                    <dt className="text-slate-500">Qty</dt>
+                    <dd className="tabular-nums">{item.quantity}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500">Rate</dt>
+                    <dd className="tabular-nums">{money(item.unitPriceCents)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500">Tax</dt>
+                    <dd className="tabular-nums">{item.taxRatePercent}%</dd>
+                  </div>
+                </dl>
+                <p className="mt-2 border-t border-slate-100 pt-2 text-right text-sm font-medium tabular-nums">
+                  {money(lineSubtotalCents(item))}
+                </p>
+              </li>
+            ))}
+          </ul>
+
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-            <table className="w-full text-sm">
+            <table className="hidden w-full text-sm sm:table">
               <thead className="border-b border-slate-200 bg-slate-50 text-left">
                 <tr className="text-xs uppercase tracking-wide text-slate-500">
                   <th className="px-4 py-3 font-medium">Description</th>
@@ -78,7 +104,7 @@ export default async function InvoiceDetailPage({
               </tbody>
             </table>
 
-            <div className="flex justify-end border-t border-slate-200 bg-slate-50 px-4 py-4">
+            <div className="flex justify-end border-slate-200 bg-slate-50 px-4 py-4 sm:border-t">
               <dl className="w-full max-w-xs space-y-1.5 text-sm">
                 <div className="flex justify-between">
                   <dt className="text-slate-500">Subtotal</dt>
@@ -126,9 +152,11 @@ export default async function InvoiceDetailPage({
             {invoice.client.email ? (
               <p className="mt-1 text-sm text-slate-600">{invoice.client.email}</p>
             ) : null}
-            {invoice.client.vatNumber ? (
+            {invoice.client.vatRegistered && invoice.client.vatNumber ? (
               <p className="mt-1 text-sm text-slate-500">VAT {invoice.client.vatNumber}</p>
-            ) : null}
+            ) : (
+              <p className="mt-1 text-xs text-slate-400">Not VAT registered</p>
+            )}
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-white p-5 text-sm">

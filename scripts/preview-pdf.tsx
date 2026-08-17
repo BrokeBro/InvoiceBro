@@ -83,6 +83,9 @@ const invoice: Invoice = {
     name: "Meridian Coffee Roasters Ltd",
     email: "accounts@meridiancoffee.example",
     address: "Unit 7, Bankside Yard\nManchester M1 5QA",
+    // Flip to false to preview an unregistered client: the VAT line should
+    // disappear from under their address in all three templates.
+    vatRegistered: true,
     vatNumber: "GB 987 6543 21",
   },
   lineItems,

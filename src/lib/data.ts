@@ -14,6 +14,24 @@ export async function getOrganization(orgId: string): Promise<Organization | nul
   return { id: snapshot.id, ...snapshot.data() } as Organization;
 }
 
+/**
+ * Fill in fields added after some clients were already created.
+ *
+ * Doing this on read rather than with a backfill script keeps old documents
+ * valid as they are. Both defaults are chosen to preserve existing behaviour
+ * exactly: a client who already has a VAT number is evidently registered, so
+ * their invoices keep printing it, and a null rate means "carry on using the
+ * organization default", which is what happened before the field existed.
+ */
+function normalizeClient(id: string, data: FirebaseFirestore.DocumentData): Client {
+  return {
+    ...(data as Client),
+    id,
+    vatRegistered: data.vatRegistered ?? Boolean(data.vatNumber),
+    taxRatePercent: data.taxRatePercent ?? null,
+  };
+}
+
 export async function listClients(orgId: string): Promise<Client[]> {
   const snapshot = await adminDb()
     .collection(`organizations/${orgId}/clients`)
@@ -21,14 +39,14 @@ export async function listClients(orgId: string): Promise<Client[]> {
     .get();
 
   return snapshot.docs
-    .map((doc) => ({ id: doc.id, ...doc.data() }) as Client)
+    .map((doc) => normalizeClient(doc.id, doc.data()))
     .filter((client) => !client.archived);
 }
 
 export async function getClient(orgId: string, clientId: string): Promise<Client | null> {
   const snapshot = await adminDb().doc(`organizations/${orgId}/clients/${clientId}`).get();
   if (!snapshot.exists) return null;
-  return { id: snapshot.id, ...snapshot.data() } as Client;
+  return normalizeClient(snapshot.id, snapshot.data()!);
 }
 
 export async function listInvoices(orgId: string): Promise<Invoice[]> {

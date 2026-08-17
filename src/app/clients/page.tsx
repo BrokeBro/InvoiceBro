@@ -12,7 +12,11 @@ export default async function ClientsPage() {
 
   return (
     <AppShell org={org} user={user} current="/clients">
-      <ClientManager clients={clients} defaultCurrency={org.defaults.currency} />
+      <ClientManager
+        clients={clients}
+        defaultCurrency={org.defaults.currency}
+        defaultTaxRate={org.defaults.taxRatePercent}
+      />
     </AppShell>
   );
 }

@@ -20,7 +20,7 @@ import { createElement, type ReactElement } from "react";
 import { renderToBuffer, type DocumentProps } from "@react-pdf/renderer";
 
 import { adminDb } from "../src/lib/firebase/admin";
-import { getInvoice, listClients, listInvoices, reserveInvoiceNumber } from "../src/lib/data";
+import { getClient, getInvoice, listClients, listInvoices, reserveInvoiceNumber } from "../src/lib/data";
 import { computeTotals } from "../src/lib/money";
 import { deriveStatus } from "../src/lib/invoice-status";
 import { resolveTemplate } from "../src/lib/pdf/render";
@@ -103,14 +103,62 @@ async function main() {
     name: "Meridian Coffee Roasters Ltd",
     email: "accounts@meridian.example",
     address: "Unit 7, Bankside Yard\nManchester",
+    vatRegistered: true,
     vatNumber: "GB 987 6543 21",
+    taxRatePercent: null,
     currency: "GBP",
     archived: false,
     createdAt: now,
   });
 
   const clients = await listClients(orgId);
-  check("listClients returns the new client", clients.length === 1 && clients[0].name.startsWith("Meridian"));
+  check("listClients returns the new client", clients.some((c) => c.name.startsWith("Meridian")));
+
+  console.log("\n3b. VAT fields, including legacy documents");
+
+  // Written WITHOUT vatRegistered/taxRatePercent, exactly as documents created
+  // before those fields existed. The read path must cope without a backfill.
+  const legacyRef = await db.collection(`organizations/${orgId}/clients`).add({
+    name: "Aardvark Legacy Ltd",
+    email: "",
+    address: "",
+    vatNumber: "GB 111 2222 33",
+    currency: "GBP",
+    archived: false,
+    createdAt: now,
+  });
+
+  const legacy = await getClient(orgId, legacyRef.id);
+  check(
+    "legacy client with a VAT number is treated as registered",
+    legacy?.vatRegistered === true,
+    `got ${legacy?.vatRegistered}`,
+  );
+  check(
+    "legacy client falls back to the org tax rate",
+    legacy?.taxRatePercent === null,
+    `got ${legacy?.taxRatePercent}`,
+  );
+
+  const unregisteredRef = await db.collection(`organizations/${orgId}/clients`).add({
+    name: "Zebra Charity",
+    email: "",
+    address: "",
+    vatRegistered: false,
+    vatNumber: "",
+    taxRatePercent: 0,
+    currency: "GBP",
+    archived: false,
+    createdAt: now,
+  });
+
+  const charity = await getClient(orgId, unregisteredRef.id);
+  check("unregistered client stays unregistered", charity?.vatRegistered === false);
+  check(
+    "an explicit 0% rate survives as 0, not null",
+    charity?.taxRatePercent === 0,
+    `got ${charity?.taxRatePercent} — 0 must not be coerced to "use the default"`,
+  );
 
   // Mixed tax rates: the case that breaks naive "one rate on the subtotal" maths.
   const lineItems = [
@@ -142,6 +190,7 @@ async function main() {
       name: "Meridian Coffee Roasters Ltd",
       email: "accounts@meridian.example",
       address: "Unit 7, Bankside Yard\nManchester",
+      vatRegistered: true,
       vatNumber: "GB 987 6543 21",
     },
     issueDate: "2026-08-16",

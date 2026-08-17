@@ -18,7 +18,9 @@ export async function saveClient(
     name: formData.get("name"),
     email: formData.get("email") ?? "",
     address: formData.get("address") ?? "",
+    vatRegistered: formData.get("vatRegistered"),
     vatNumber: formData.get("vatNumber") ?? "",
+    taxRatePercent: formData.get("taxRatePercent") ?? "",
     currency: formData.get("currency") ?? org.defaults.currency,
   });
 
@@ -26,14 +28,22 @@ export async function saveClient(
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid details" };
   }
 
+  // A client marked as not VAT registered keeps no VAT number. Clearing it here
+  // rather than merely hiding it means the invoice snapshot cannot later pick up
+  // a stale number, and un-ticking the box genuinely removes the data.
+  const data = {
+    ...parsed.data,
+    vatNumber: parsed.data.vatRegistered ? parsed.data.vatNumber : "",
+  };
+
   const collection = adminDb().collection(`organizations/${org.id}/clients`);
 
   if (clientId) {
     // merge:true so we never clobber fields this form doesn't manage.
-    await collection.doc(clientId).set(parsed.data, { merge: true });
+    await collection.doc(clientId).set(data, { merge: true });
   } else {
     await collection.add({
-      ...parsed.data,
+      ...data,
       archived: false,
       createdAt: new Date().toISOString(),
     });

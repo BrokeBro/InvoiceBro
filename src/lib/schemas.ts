@@ -10,7 +10,19 @@ export const clientSchema = z.object({
   name: z.string().trim().min(1, "Client name is required").max(200),
   email: z.union([z.string().trim().email("Enter a valid email"), z.literal("")]),
   address: z.string().trim().max(1000).default(""),
+  // An unchecked HTML checkbox submits nothing at all, so absence means false.
+  vatRegistered: z
+    .union([z.literal("on"), z.literal("true"), z.boolean(), z.undefined(), z.null()])
+    .transform((value) => value === "on" || value === "true" || value === true),
   vatNumber: z.string().trim().max(60).default(""),
+  // "" means "use the organization default" and becomes null. That is a
+  // different thing from "0", which is an explicit zero-rating and must not
+  // drift when the org default changes later.
+  taxRatePercent: z
+    .union([z.literal(""), z.null(), z.undefined(), z.coerce.number().min(0).max(100)])
+    .transform((value) =>
+      value === "" || value === null || value === undefined ? null : Number(value),
+    ),
   currency: z.string().trim().length(3).toUpperCase().default("GBP"),
 });
 

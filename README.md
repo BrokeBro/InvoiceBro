@@ -108,6 +108,45 @@ Deploy the rules once, from the Firebase console or the CLI:
 firebase deploy --only firestore:rules,storage:rules
 ```
 
+## Dependency override: `jose` pinned to v5
+
+`package.json` pins `jose` to `^5.10.0` via `overrides`. This is deliberate and
+should be removed once it is no longer needed.
+
+`firebase-admin@14` depends on `jwks-rsa@4`, which is CommonJS and does a plain
+`require('jose')` on the first line of `src/utils.js`. `jose@6` is ESM-only and
+ships **no CommonJS build** — its sole export condition is
+`"default": "./dist/webapi/index.js"`. Any runtime that cannot `require()` an ES
+module therefore fails at import time with:
+
+```
+Failed to load external module firebase-admin-…/auth:
+ERR_REQUIRE_ESM: require() of ES Module .../jose/dist/webapi/index.js
+                 from .../jwks-rsa/src/utils.js not supported
+```
+
+This passed locally and 500'd every request in production, because Node ≥22.12
+can `require()` a synchronous ES module graph and the deployed Lambda could not.
+Raising the Node version does **not** fix it — the Vercel project was already on
+Node 24.x when this happened.
+
+`jose@5.10.0` ships a real CJS build (`"require": "./dist/node/cjs/index.js"`),
+so the `require` resolves normally and the failure mode disappears on every
+runtime. `jwks-rsa` uses exactly two jose APIs — `importJWK` and `exportSPKI` —
+both present in v5, and it is the only package that depends on jose at all.
+
+It *is* a semver override (`jwks-rsa` asks for `^6.1.3`). Drop it when
+`jwks-rsa` ships a CJS-safe release or moves to `import()`.
+
+To reproduce the original failure on Node 22, disable the `require(esm)`
+behaviour that masks it locally:
+
+```bash
+node --no-experimental-require-module -e "require('firebase-admin/auth')"
+```
+
+That must succeed. If it throws `ERR_REQUIRE_ESM`, the override has been lost.
+
 ## Verifying against live Firebase
 
 ```bash

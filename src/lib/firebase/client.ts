@@ -21,7 +21,30 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+/**
+ * Missing config produces `auth/invalid-api-key` from Firebase, which says
+ * nothing about *which* key or *where* to set it. Since NEXT_PUBLIC_* values are
+ * inlined at build time, a build made without them produces a bundle that can
+ * never work at runtime — so name the problem precisely.
+ */
+function assertConfigured(): void {
+  const missing = Object.entries(firebaseConfig)
+    .filter(([, value]) => !value)
+    .map(([key]) => key);
+
+  if (missing.length > 0) {
+    throw new Error(
+      `Firebase web config is missing: ${missing.join(", ")}. These come from ` +
+        `NEXT_PUBLIC_FIREBASE_* and are inlined at build time, so the build ` +
+        `itself needs them — setting them afterwards is not enough, the app ` +
+        `must be rebuilt. They are committed in .env; if that file is missing ` +
+        `or the deployment overrides them with blanks, sign-in cannot work.`,
+    );
+  }
+}
+
 export function getFirebaseApp(): FirebaseApp {
+  assertConfigured();
   return getApps().length ? getApp() : initializeApp(firebaseConfig);
 }
 

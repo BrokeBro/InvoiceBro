@@ -48,5 +48,13 @@ next-env.d.ts
 # Local PDF template previews
 .preview/
 
-# ...but the example file is documentation, not config
+# Two exceptions to the .env* rule above.
+#
+# .env holds ONLY the public Firebase web config, which is public by design and
+# must be present at build time or the browser throws auth/invalid-api-key.
+# .env.example is documentation.
+#
+# Everything secret lives in .env.local, which stays ignored by the .env* rule —
+# in particular FIREBASE_SERVICE_ACCOUNT_KEY, which bypasses all security rules.
+!.env
 !.env.example

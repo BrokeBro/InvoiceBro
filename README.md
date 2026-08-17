@@ -75,20 +75,31 @@ domains**, or Google sign-in works locally but fails in production.
 
 ### 2. Environment
 
+There are exactly **two** places configuration lives, and the split matters:
+
+| File | Contents | Committed? |
+| --- | --- | --- |
+| `.env` | the six public `NEXT_PUBLIC_FIREBASE_*` values | **yes** |
+| `.env.local` | `FIREBASE_SERVICE_ACCOUNT_KEY` — the only real secret | never |
+
+`.env` is committed deliberately. Firebase client config is public by design —
+the `apiKey` identifies the project and grants nothing; anyone can read it out
+of the browser bundle of any Firebase app. Because `NEXT_PUBLIC_*` values are
+inlined **at build time**, a build without them produces a bundle that can never
+work, failing with `auth/invalid-api-key` at sign-in. Committing them means
+every build — local, CI, Vercel preview and production — has the config with no
+dashboard fields to set. Real environment variables still take precedence, so a
+deployment can point at a different Firebase project without a code change.
+
+For the secret:
+
 ```bash
-cp .env.example .env.local
-```
-
-The `NEXT_PUBLIC_FIREBASE_*` values are already filled in — Firebase client
-config is public by design; the `apiKey` identifies the project and grants
-nothing on its own.
-
-`FIREBASE_SERVICE_ACCOUNT_KEY` is the one real secret: it bypasses every
-security rule. Base64-encode the JSON you downloaded and set it:
-
-```bash
+cp .env.example .env.local     # then fill in FIREBASE_SERVICE_ACCOUNT_KEY
 base64 -w0 serviceAccountKey.json    # macOS: base64 -i serviceAccountKey.json
 ```
+
+It bypasses every Firestore and Storage rule, so it must never be committed and
+never appear in `.env`.
 
 ### 3. Run
 
@@ -99,8 +110,14 @@ npm run dev
 
 ### 4. Deploy
 
-Import the repo into Vercel and set the same environment variables. Nothing else
-is required — the PDF route already pins the `nodejs` runtime.
+Import the repo into Vercel. The public config ships in `.env`, so the **only**
+variable to set in the dashboard is `FIREBASE_SERVICE_ACCOUNT_KEY` (base64, all
+environments). Nothing else is required — the PDF route already pins the
+`nodejs` runtime.
+
+Then add the deployment domain under **Firebase → Authentication → Settings →
+Authorized domains**, or Google sign-in fails in production while working
+locally.
 
 Deploy the rules once, from the Firebase console or the CLI:
 

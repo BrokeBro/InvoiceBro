@@ -26,20 +26,47 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "idToken is required" }, { status: 400 });
   }
 
+  // Server misconfiguration must NOT be reported as a rejected credential.
+  //
+  // This used to sit inside the try/catch below, so a missing
+  // FIREBASE_SERVICE_ACCOUNT_KEY surfaced to the user as "Invalid sign-in" —
+  // pointing at their Google account when the actual fault was a deployment
+  // with no credentials. Different cause, different status, different message.
+  let auth: ReturnType<typeof adminAuth>;
+  try {
+    auth = adminAuth();
+  } catch (error) {
+    console.error("Firebase Admin is not configured:", error);
+    return NextResponse.json(
+      {
+        error:
+          "The server is not configured for sign-in. FIREBASE_SERVICE_ACCOUNT_KEY " +
+          "is missing or invalid in this deployment.",
+      },
+      { status: 500 },
+    );
+  }
+
+  let decoded;
   try {
     // Verify before minting. Without this, any string could become a session.
-    const decoded = await adminAuth().verifyIdToken(idToken, true);
+    decoded = await auth.verifyIdToken(idToken, true);
+  } catch (error) {
+    console.error("verifyIdToken failed:", error);
+    return NextResponse.json({ error: "Invalid sign-in" }, { status: 401 });
+  }
 
-    // Guard against a stale token being replayed long after sign-in.
-    const ageSeconds = Date.now() / 1000 - decoded.auth_time;
-    if (ageSeconds > 5 * 60) {
-      return NextResponse.json(
-        { error: "Sign-in is stale, please try again" },
-        { status: 401 },
-      );
-    }
+  // Guard against a stale token being replayed long after sign-in.
+  const ageSeconds = Date.now() / 1000 - decoded.auth_time;
+  if (ageSeconds > 5 * 60) {
+    return NextResponse.json(
+      { error: "Sign-in is stale, please try again" },
+      { status: 401 },
+    );
+  }
 
-    const sessionCookie = await adminAuth().createSessionCookie(idToken, {
+  try {
+    const sessionCookie = await auth.createSessionCookie(idToken, {
       expiresIn: SESSION_MAX_AGE_MS,
     });
 
@@ -55,8 +82,19 @@ export async function POST(request: Request) {
     });
 
     return response;
-  } catch {
-    return NextResponse.json({ error: "Invalid sign-in" }, { status: 401 });
+  } catch (error) {
+    // The token was already verified above, so a failure here is the server's
+    // fault, not the user's — most often the service account lacking the
+    // "Service Account Token Creator" role needed to mint session cookies.
+    console.error("createSessionCookie failed:", error);
+    return NextResponse.json(
+      {
+        error:
+          "Could not create your session. The service account may be missing " +
+          "the Service Account Token Creator role.",
+      },
+      { status: 500 },
+    );
   }
 }
 

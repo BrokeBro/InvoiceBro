@@ -140,10 +140,12 @@ export function ClassicTemplate({
           <View>
             {logoUrl ? (
               <Image src={logoUrl} style={styles.logo} />
-            ) : (
-              <Text style={styles.orgName}>{organization.name}</Text>
-            )}
-            {logoUrl ? <Text style={[styles.orgName, { marginTop: 6 }]}>{organization.name}</Text> : null}
+            ) : null}
+          </View>
+
+          <View style={styles.titleBlock}>
+            <Text style={[styles.title, { color: accentColor }]}>INVOICE</Text>
+            <Text style={styles.orgName}>{organization.name}</Text>
             {organization.address && organization.visibility?.showAddress !== false ? (
               <Text style={styles.orgLine}>{organization.address}</Text>
             ) : null}
@@ -156,11 +158,6 @@ export function ClassicTemplate({
             {organization.vatNumber ? (
               <Text style={styles.orgLine}>VAT {organization.vatNumber}</Text>
             ) : null}
-          </View>
-
-          <View style={styles.titleBlock}>
-            <Text style={[styles.title, { color: accentColor }]}>INVOICE</Text>
-            <Text style={styles.number}>{invoice.number ?? "DRAFT"}</Text>
           </View>
         </View>
 
@@ -179,16 +176,16 @@ export function ClassicTemplate({
 
           <View style={styles.metaColumn}>
             <View style={styles.metaRow}>
+              <Text style={styles.metaLabel}>INVOICE NO.</Text>
+              <Text style={styles.metaStrong}>{invoice.number ?? "DRAFT"}</Text>
+            </View>
+            <View style={styles.metaRow}>
               <Text style={styles.metaLabel}>ISSUE DATE</Text>
               <Text>{formatDate(invoice.issueDate)}</Text>
             </View>
             <View style={styles.metaRow}>
               <Text style={styles.metaLabel}>DUE DATE</Text>
               <Text style={styles.metaStrong}>{formatDate(invoice.dueDate)}</Text>
-            </View>
-            <View style={styles.metaRow}>
-              <Text style={styles.metaLabel}>AMOUNT DUE</Text>
-              <Text style={styles.metaStrong}>{money(balanceDue)}</Text>
             </View>
           </View>
         </View>
@@ -258,54 +255,31 @@ export function ClassicTemplate({
           </View>
         ) : null}
 
-        {organization.paymentDetails?.method ? (
-          <View style={{ marginTop: 30 }} wrap={false}>
-            <Text style={[styles.notesLabel, { fontFamily: FONT.bold }]}>PAYMENT DETAILS</Text>
-            {organization.paymentDetails.showFullDetails &&
-            (organization.paymentDetails.accountHolder ||
-              organization.paymentDetails.bankName ||
-              organization.paymentDetails.sortCode ||
-              organization.paymentDetails.accountNumber) ? (
-              <>
-                <Text style={{ fontSize: SIZE.small, color: INK.muted, marginBottom: 2 }}>
+        <View style={styles.footer} fixed>
+          {organization.paymentDetails?.method ? (
+            <>
+              <Text style={[styles.notesLabel, { marginBottom: 2, textAlign: "left" }]}>
+                PAYMENT DETAILS
+              </Text>
+              {organization.paymentDetails.showFullDetails &&
+              (organization.paymentDetails.accountHolder ||
+                organization.paymentDetails.bankName ||
+                organization.paymentDetails.sortCode ||
+                organization.paymentDetails.accountNumber) ? (
+                <Text style={{ fontSize: SIZE.micro, color: INK.muted, textAlign: "left" }}>
+                  Account holder: {organization.paymentDetails.accountHolder}
+                  {"  "}Bank: {organization.paymentDetails.bankName}
+                  {"  "}Sort code: {organization.paymentDetails.sortCode}
+                  {"  "}Account No.: {organization.paymentDetails.accountNumber}
+                </Text>
+              ) : (
+                <Text style={{ fontSize: SIZE.micro, color: INK.muted, textAlign: "left" }}>
                   Payment method: {organization.paymentDetails.method}
                 </Text>
-                <Text style={{ fontSize: SIZE.small, color: INK.body }}>
-                  {[
-                    organization.paymentDetails.accountHolder
-                      ? `Account holder: ${organization.paymentDetails.accountHolder}`
-                      : null,
-                    organization.paymentDetails.bankName
-                      ? `Bank: ${organization.paymentDetails.bankName}`
-                      : null,
-                    organization.paymentDetails.sortCode
-                      ? `Sort code: ${organization.paymentDetails.sortCode}`
-                      : null,
-                    organization.paymentDetails.accountNumber
-                      ? `Account No.: ${organization.paymentDetails.accountNumber}`
-                      : null,
-                  ]
-                    .filter(Boolean)
-                    .join("  ")}
-                </Text>
-              </>
-            ) : (
-              <Text style={{ fontSize: SIZE.small, color: INK.muted }}>
-                Payment method: {organization.paymentDetails.method}
-              </Text>
-            )}
-          </View>
-        ) : null}
-
-        <Text
-          style={styles.footer}
-          fixed
-          render={({ pageNumber, totalPages }) =>
-            totalPages > 1
-              ? `${organization.name} · Page ${pageNumber} of ${totalPages}`
-              : organization.name
-          }
-        />
+              )}
+            </>
+          ) : null}
+        </View>
       </Page>
     </Document>
   );

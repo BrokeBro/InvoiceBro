@@ -114,25 +114,22 @@ export function ModernTemplate({
         <View style={[styles.banner, { backgroundColor: accentColor }]}>
           <View>
             {logoUrl ? <Image src={logoUrl} style={styles.logo} /> : null}
-            <Text style={[styles.orgName, { color: onAccent }]}>{organization.name}</Text>
-            {organization.address && organization.visibility?.showAddress !== false ? (
-              <Text style={[styles.orgLine, { color: onAccent }]}>{organization.address}</Text>
-            ) : null}
-            {organization.email ? (
-              <Text style={[styles.orgLine, { color: onAccent }]}>{organization.email}</Text>
-            ) : null}
-            {organization.vatNumber ? (
-              <Text style={[styles.orgLine, { color: onAccent }]}>
-                VAT {organization.vatNumber}
-              </Text>
-            ) : null}
           </View>
 
           <View style={styles.titleBlock}>
             <Text style={[styles.title, { color: onAccent }]}>Invoice</Text>
-            <Text style={[styles.number, { color: onAccent }]}>
-              {invoice.number ?? "DRAFT"}
-            </Text>
+            <Text style={[styles.orgName, { color: onAccent, textAlign: "right" }]}>{organization.name}</Text>
+            {organization.address && organization.visibility?.showAddress !== false ? (
+              <Text style={[styles.orgLine, { color: onAccent, textAlign: "right" }]}>{organization.address}</Text>
+            ) : null}
+            {organization.email ? (
+              <Text style={[styles.orgLine, { color: onAccent, textAlign: "right" }]}>{organization.email}</Text>
+            ) : null}
+            {organization.vatNumber ? (
+              <Text style={[styles.orgLine, { color: onAccent, textAlign: "right" }]}>
+                VAT {organization.vatNumber}
+              </Text>
+            ) : null}
           </View>
         </View>
 
@@ -158,10 +155,8 @@ export function ModernTemplate({
             </View>
 
             <View style={styles.card}>
-              <Text style={styles.label}>AMOUNT DUE</Text>
-              <Text style={[styles.dueAmount, { color: accentColor }]}>
-                {money(balanceDue)}
-              </Text>
+              <Text style={styles.label}>INVOICE NO.</Text>
+              <Text style={styles.strong}>{invoice.number ?? "DRAFT"}</Text>
             </View>
           </View>
 
@@ -244,55 +239,33 @@ export function ModernTemplate({
             </View>
           ) : null}
 
+        </View>
+
+        <View style={styles.footer} fixed>
           {organization.paymentDetails?.method ? (
-            <View style={{ marginTop: 30 }} wrap={false}>
-              <Text style={styles.label}>PAYMENT DETAILS</Text>
+            <>
+              <Text style={{ fontFamily: FONT.bold, fontSize: SIZE.micro, letterSpacing: 1, color: INK.faint, marginBottom: 2, textAlign: "left" }}>
+                PAYMENT DETAILS
+              </Text>
               {organization.paymentDetails.showFullDetails &&
               (organization.paymentDetails.accountHolder ||
                 organization.paymentDetails.bankName ||
                 organization.paymentDetails.sortCode ||
                 organization.paymentDetails.accountNumber) ? (
-                <>
-                  <Text style={{ fontSize: SIZE.small, color: INK.muted, marginBottom: 2 }}>
-                    Payment method: {organization.paymentDetails.method}
-                  </Text>
-                  <Text style={{ fontSize: SIZE.small, color: INK.body }}>
-                    {[
-                      organization.paymentDetails.accountHolder
-                        ? `Account holder: ${organization.paymentDetails.accountHolder}`
-                        : null,
-                      organization.paymentDetails.bankName
-                        ? `Bank: ${organization.paymentDetails.bankName}`
-                        : null,
-                      organization.paymentDetails.sortCode
-                        ? `Sort code: ${organization.paymentDetails.sortCode}`
-                        : null,
-                      organization.paymentDetails.accountNumber
-                        ? `Account No.: ${organization.paymentDetails.accountNumber}`
-                        : null,
-                    ]
-                      .filter(Boolean)
-                      .join("  ")}
-                  </Text>
-                </>
+                <Text style={{ fontSize: SIZE.micro, color: INK.muted, textAlign: "left" }}>
+                  Account holder: {organization.paymentDetails.accountHolder}
+                  {"  "}Bank: {organization.paymentDetails.bankName}
+                  {"  "}Sort code: {organization.paymentDetails.sortCode}
+                  {"  "}Account No.: {organization.paymentDetails.accountNumber}
+                </Text>
               ) : (
-                <Text style={{ fontSize: SIZE.small, color: INK.muted }}>
+                <Text style={{ fontSize: SIZE.micro, color: INK.muted, textAlign: "left" }}>
                   Payment method: {organization.paymentDetails.method}
                 </Text>
               )}
-            </View>
+            </>
           ) : null}
         </View>
-
-        <Text
-          style={styles.footer}
-          fixed
-          render={({ pageNumber, totalPages }) =>
-            totalPages > 1
-              ? `${organization.name} · Page ${pageNumber} of ${totalPages}`
-              : organization.name
-          }
-        />
       </Page>
     </Document>
   );

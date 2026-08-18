@@ -1,12 +1,18 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { signInWithPopup, signInWithRedirect } from "firebase/auth";
+import { useEffect, useState } from "react";
+import {
+  getRedirectResult,
+  signInWithPopup,
+  signInWithRedirect,
+} from "firebase/auth";
 
 import { getFirebaseAuth, googleProvider } from "@/lib/firebase/client";
 
-async function exchangeToken(idToken: string): Promise<void> {
+async function exchangeTokenAndRedirect(
+  idToken: string,
+  next: string,
+): Promise<void> {
   const response = await fetch("/api/auth/session", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -17,12 +23,45 @@ async function exchangeToken(idToken: string): Promise<void> {
     const body = (await response.json().catch(() => ({}))) as { error?: string };
     throw new Error(body.error ?? "Could not start your session");
   }
+
+  await getFirebaseAuth().signOut();
+
+  // Hard navigation so the browser re-requests with the new cookie.
+  // router.replace would briefly re-render the login page first.
+  window.location.replace(next);
 }
 
 export function LoginButton({ next }: { next?: string }) {
-  const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const destination = next ?? "/invoices";
+
+  // Pick up the credential after signInWithRedirect returns (iOS fallback).
+  useEffect(() => {
+    let cancelled = false;
+
+    getRedirectResult(getFirebaseAuth())
+      .then(async (result) => {
+        if (!result || cancelled) return;
+        setBusy(true);
+        const idToken = await result.user.getIdToken();
+        await exchangeTokenAndRedirect(idToken, destination);
+      })
+      .catch((caught) => {
+        if (cancelled) return;
+        const message = caught instanceof Error ? caught.message : "Sign-in failed";
+        if (
+          !message.includes("auth/popup-closed-by-user") &&
+          !message.includes("cancelled")
+        ) {
+          setError(interpretError(message));
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [destination]);
 
   async function signIn() {
     setBusy(true);
@@ -31,11 +70,7 @@ export function LoginButton({ next }: { next?: string }) {
     try {
       const credential = await signInWithPopup(getFirebaseAuth(), googleProvider());
       const idToken = await credential.user.getIdToken();
-      await exchangeToken(idToken);
-      await getFirebaseAuth().signOut();
-
-      router.replace(next ?? "/invoices");
-      router.refresh();
+      await exchangeTokenAndRedirect(idToken, destination);
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : "Sign-in failed";
 
@@ -45,24 +80,17 @@ export function LoginButton({ next }: { next?: string }) {
         message.includes("auth/popup-blocked") ||
         message.includes("auth/cancelled-popup-request")
       ) {
-        // Mobile Safari (and some in-app browsers) block popups outright.
-        // Redirect navigates the whole page to Google instead.
+        // Mobile Safari blocks popups. Redirect navigates the whole page instead.
         try {
           await signInWithRedirect(getFirebaseAuth(), googleProvider());
           return;
         } catch {
-          setError("Popup was blocked. Please allow popups for this site, or try a different browser.");
+          setError(
+            "Popup was blocked. Please allow popups for this site, or try a different browser.",
+          );
         }
-      } else if (message.includes("auth/unauthorized-domain")) {
-        setError(
-          "This domain isn't authorised in Firebase. Add it under Authentication → Settings → Authorized domains.",
-        );
-      } else if (message.includes("auth/operation-not-allowed")) {
-        setError(
-          "Google sign-in isn't enabled yet. Turn it on in Firebase → Authentication → Sign-in method.",
-        );
       } else {
-        setError(message);
+        setError(interpretError(message));
       }
       setBusy(false);
     }
@@ -85,6 +113,16 @@ export function LoginButton({ next }: { next?: string }) {
       ) : null}
     </div>
   );
+}
+
+function interpretError(message: string): string {
+  if (message.includes("auth/unauthorized-domain")) {
+    return "This domain isn't authorised in Firebase. Add it under Authentication → Settings → Authorized domains.";
+  }
+  if (message.includes("auth/operation-not-allowed")) {
+    return "Google sign-in isn't enabled yet. Turn it on in Firebase → Authentication → Sign-in method.";
+  }
+  return message;
 }
 
 function GoogleMark() {

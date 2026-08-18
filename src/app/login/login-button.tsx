@@ -1,15 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { getRedirectResult, signInWithPopup, signInWithRedirect } from "firebase/auth";
+import { useState } from "react";
+import { signInWithPopup, signInWithRedirect } from "firebase/auth";
 
 import { getFirebaseAuth, googleProvider } from "@/lib/firebase/client";
-
-function isMobile(): boolean {
-  if (typeof navigator === "undefined") return false;
-  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-}
 
 async function exchangeToken(idToken: string): Promise<void> {
   const response = await fetch("/api/auth/session", {
@@ -29,46 +24,11 @@ export function LoginButton({ next }: { next?: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Handle the return from signInWithRedirect (mobile flow).
-  useEffect(() => {
-    let cancelled = false;
-
-    getRedirectResult(getFirebaseAuth())
-      .then(async (result) => {
-        if (!result || cancelled) return;
-
-        setBusy(true);
-        const idToken = await result.user.getIdToken();
-        await exchangeToken(idToken);
-        await getFirebaseAuth().signOut();
-
-        router.replace(next ?? "/invoices");
-        router.refresh();
-      })
-      .catch((caught) => {
-        if (cancelled) return;
-        const message = caught instanceof Error ? caught.message : "Sign-in failed";
-        if (!message.includes("auth/popup-closed-by-user") && !message.includes("cancelled")) {
-          setError(interpretError(message));
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [next, router]);
-
   async function signIn() {
     setBusy(true);
     setError(null);
 
     try {
-      if (isMobile()) {
-        await signInWithRedirect(getFirebaseAuth(), googleProvider());
-        // Page navigates away; nothing after this runs.
-        return;
-      }
-
       const credential = await signInWithPopup(getFirebaseAuth(), googleProvider());
       const idToken = await credential.user.getIdToken();
       await exchangeToken(idToken);
@@ -81,16 +41,28 @@ export function LoginButton({ next }: { next?: string }) {
 
       if (message.includes("auth/popup-closed-by-user") || message.includes("cancelled")) {
         setError(null);
-      } else if (message.includes("auth/popup-blocked")) {
-        // Fallback: if even desktop gets a popup block, try redirect.
+      } else if (
+        message.includes("auth/popup-blocked") ||
+        message.includes("auth/cancelled-popup-request")
+      ) {
+        // Mobile Safari (and some in-app browsers) block popups outright.
+        // Redirect navigates the whole page to Google instead.
         try {
           await signInWithRedirect(getFirebaseAuth(), googleProvider());
           return;
         } catch {
-          setError("Popup was blocked. Please allow popups for this site and try again.");
+          setError("Popup was blocked. Please allow popups for this site, or try a different browser.");
         }
+      } else if (message.includes("auth/unauthorized-domain")) {
+        setError(
+          "This domain isn't authorised in Firebase. Add it under Authentication → Settings → Authorized domains.",
+        );
+      } else if (message.includes("auth/operation-not-allowed")) {
+        setError(
+          "Google sign-in isn't enabled yet. Turn it on in Firebase → Authentication → Sign-in method.",
+        );
       } else {
-        setError(interpretError(message));
+        setError(message);
       }
       setBusy(false);
     }
@@ -113,16 +85,6 @@ export function LoginButton({ next }: { next?: string }) {
       ) : null}
     </div>
   );
-}
-
-function interpretError(message: string): string {
-  if (message.includes("auth/unauthorized-domain")) {
-    return "This domain isn't authorised in Firebase. Add it under Authentication → Settings → Authorized domains.";
-  }
-  if (message.includes("auth/operation-not-allowed")) {
-    return "Google sign-in isn't enabled yet. Turn it on in Firebase → Authentication → Sign-in method.";
-  }
-  return message;
 }
 
 function GoogleMark() {

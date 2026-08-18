@@ -12,9 +12,18 @@ import { GoogleAuthProvider, getAuth, type Auth } from "firebase/auth";
 //
 // Analytics is also deliberately absent — getAnalytics() touches `window` at
 // import time, which breaks server rendering, and it earns nothing here.
+// Use the app's own domain as authDomain so signInWithRedirect stays
+// same-origin. Safari's ITP partitions storage by origin, so a redirect
+// to firebaseapp.com loses its state on return. The /__/auth/* rewrite in
+// next.config.ts proxies the actual auth handler to Firebase's servers.
+const authDomain =
+  typeof window !== "undefined"
+    ? window.location.host
+    : process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
+
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  authDomain,
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,

@@ -29,6 +29,13 @@ export async function saveOrganization(formData: FormData): Promise<ActionResult
     numberPrefix: formData.get("numberPrefix") ?? "INV-",
     numberPadding: formData.get("numberPadding"),
     defaultNotes: formData.get("defaultNotes") ?? "",
+    paymentMethod: formData.get("paymentMethod") ?? "Bank Transfer",
+    accountHolder: formData.get("accountHolder") ?? "",
+    bankName: formData.get("bankName") ?? "",
+    sortCode: formData.get("sortCode") ?? "",
+    accountNumber: formData.get("accountNumber") ?? "",
+    showFullDetails: formData.get("showFullDetails"),
+    showAddress: formData.get("showAddress"),
   });
 
   if (!parsed.success) {
@@ -85,6 +92,17 @@ export async function saveOrganization(formData: FormData): Promise<ActionResult
         taxRatePercent: input.taxRatePercent,
         paymentTermsDays: input.paymentTermsDays,
         notes: input.defaultNotes,
+      },
+      paymentDetails: {
+        method: input.paymentMethod,
+        accountHolder: input.accountHolder,
+        bankName: input.bankName,
+        sortCode: input.sortCode,
+        accountNumber: input.accountNumber,
+        showFullDetails: input.showFullDetails,
+      },
+      visibility: {
+        showAddress: input.showAddress,
       },
     },
     { merge: true },

@@ -38,6 +38,17 @@ export type Organization = {
     paymentTermsDays: number;
     notes: string;
   };
+  paymentDetails: {
+    method: string;
+    accountHolder: string;
+    bankName: string;
+    sortCode: string;
+    accountNumber: string;
+    showFullDetails: boolean;
+  };
+  visibility: {
+    showAddress: boolean;
+  };
   createdAt: string;
 };
 

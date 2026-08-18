@@ -61,6 +61,19 @@ export const organizationSchema = z.object({
   numberPrefix: z.string().trim().max(20).default("INV-"),
   numberPadding: z.coerce.number().int().min(1).max(10),
   defaultNotes: z.string().trim().max(2000).default(""),
+  // Payment details
+  paymentMethod: z.string().trim().max(100).default("Bank Transfer"),
+  accountHolder: z.string().trim().max(200).default(""),
+  bankName: z.string().trim().max(200).default(""),
+  sortCode: z.string().trim().max(20).default(""),
+  accountNumber: z.string().trim().max(40).default(""),
+  showFullDetails: z
+    .union([z.literal("on"), z.literal("true"), z.boolean(), z.undefined(), z.null()])
+    .transform((value) => value === "on" || value === "true" || value === true),
+  // Visibility
+  showAddress: z
+    .union([z.literal("on"), z.literal("true"), z.boolean(), z.undefined(), z.null()])
+    .transform((value) => value === "on" || value === "true" || value === true),
 });
 
 export type ClientInput = z.infer<typeof clientSchema>;

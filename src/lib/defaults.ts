@@ -23,6 +23,17 @@ export const DEFAULT_ORGANIZATION = {
     paymentTermsDays: 30,
     notes: "",
   },
+  paymentDetails: {
+    method: "Bank Transfer",
+    accountHolder: "",
+    bankName: "",
+    sortCode: "",
+    accountNumber: "",
+    showFullDetails: true,
+  },
+  visibility: {
+    showAddress: true,
+  },
 };
 
 /** Currencies offered in the picker. Any ISO 4217 code works at runtime. */

@@ -115,7 +115,7 @@ export function ModernTemplate({
           <View>
             {logoUrl ? <Image src={logoUrl} style={styles.logo} /> : null}
             <Text style={[styles.orgName, { color: onAccent }]}>{organization.name}</Text>
-            {organization.address ? (
+            {organization.address && organization.visibility?.showAddress !== false ? (
               <Text style={[styles.orgLine, { color: onAccent }]}>{organization.address}</Text>
             ) : null}
             {organization.email ? (
@@ -241,6 +241,45 @@ export function ModernTemplate({
                   <Text style={styles.notesBody}>{invoice.terms}</Text>
                 </>
               ) : null}
+            </View>
+          ) : null}
+
+          {organization.paymentDetails?.method ? (
+            <View style={{ marginTop: 30 }} wrap={false}>
+              <Text style={styles.label}>PAYMENT DETAILS</Text>
+              {organization.paymentDetails.showFullDetails &&
+              (organization.paymentDetails.accountHolder ||
+                organization.paymentDetails.bankName ||
+                organization.paymentDetails.sortCode ||
+                organization.paymentDetails.accountNumber) ? (
+                <>
+                  <Text style={{ fontSize: SIZE.small, color: INK.muted, marginBottom: 2 }}>
+                    Payment method: {organization.paymentDetails.method}
+                  </Text>
+                  <Text style={{ fontSize: SIZE.small, color: INK.body }}>
+                    {[
+                      organization.paymentDetails.accountHolder
+                        ? `Account holder: ${organization.paymentDetails.accountHolder}`
+                        : null,
+                      organization.paymentDetails.bankName
+                        ? `Bank: ${organization.paymentDetails.bankName}`
+                        : null,
+                      organization.paymentDetails.sortCode
+                        ? `Sort code: ${organization.paymentDetails.sortCode}`
+                        : null,
+                      organization.paymentDetails.accountNumber
+                        ? `Account No.: ${organization.paymentDetails.accountNumber}`
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join("  ")}
+                  </Text>
+                </>
+              ) : (
+                <Text style={{ fontSize: SIZE.small, color: INK.muted }}>
+                  Payment method: {organization.paymentDetails.method}
+                </Text>
+              )}
             </View>
           ) : null}
         </View>

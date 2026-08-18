@@ -68,6 +68,15 @@ export function OrganizationForm({
                 className={inputClass}
               />
             </Field>
+            <label className="mt-2 flex items-center gap-2">
+              <input
+                type="checkbox"
+                name="showAddress"
+                defaultChecked={organization.visibility?.showAddress !== false}
+                className="h-4 w-4 rounded border-slate-300"
+              />
+              <span className="text-xs text-slate-600">Show address on invoices</span>
+            </label>
           </div>
         </div>
       </Section>
@@ -131,6 +140,64 @@ export function OrganizationForm({
             </p>
           </Field>
         </div>
+      </Section>
+
+      <Section title="Payment details">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Payment method">
+            <input
+              name="paymentMethod"
+              defaultValue={organization.paymentDetails?.method ?? "Bank Transfer"}
+              placeholder="Bank Transfer"
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Account holder">
+            <input
+              name="accountHolder"
+              defaultValue={organization.paymentDetails?.accountHolder ?? ""}
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Bank name">
+            <input
+              name="bankName"
+              defaultValue={organization.paymentDetails?.bankName ?? ""}
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Sort code">
+            <input
+              name="sortCode"
+              defaultValue={organization.paymentDetails?.sortCode ?? ""}
+              placeholder="00-00-00"
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Account number">
+            <input
+              name="accountNumber"
+              defaultValue={organization.paymentDetails?.accountNumber ?? ""}
+              className={inputClass}
+            />
+          </Field>
+          <div className="flex items-end">
+            <label className="flex items-center gap-2 pb-2.5">
+              <input
+                type="checkbox"
+                name="showFullDetails"
+                defaultChecked={organization.paymentDetails?.showFullDetails !== false}
+                className="h-4 w-4 rounded border-slate-300"
+              />
+              <span className="text-xs text-slate-600">
+                Show full bank details on invoice
+              </span>
+            </label>
+          </div>
+        </div>
+        <p className="mt-2 text-xs text-slate-400">
+          When unchecked, only the payment method name appears on the PDF.
+        </p>
       </Section>
 
       <Section title="Invoice defaults">

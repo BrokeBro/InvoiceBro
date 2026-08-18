@@ -68,6 +68,15 @@ const organization: Organization = {
   branding: { accentColor: "#2563eb", template: "classic" },
   numbering: { prefix: "INV-", padding: 4, next: 43 },
   defaults: { currency: "GBP", taxRatePercent: 20, paymentTermsDays: 30, notes: "" },
+  paymentDetails: {
+    method: "Bank Transfer",
+    accountHolder: "Kelly Jane Puddao",
+    bankName: "revolut",
+    sortCode: "04-29-09",
+    accountNumber: "60954264",
+    showFullDetails: true,
+  },
+  visibility: { showAddress: true },
   createdAt: new Date().toISOString(),
 };
 

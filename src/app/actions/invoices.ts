@@ -183,6 +183,70 @@ export async function voidInvoice(invoiceId: string): Promise<ActionResult> {
   return { ok: true };
 }
 
+export async function markPaid(invoiceId: string): Promise<ActionResult> {
+  const { org } = await requireCurrentOrg();
+  const invoice = await getInvoice(org.id, invoiceId);
+  if (!invoice) return { ok: false, error: "Invoice not found" };
+  if (invoice.status === "draft" || invoice.status === "void") {
+    return { ok: false, error: "Cannot mark a draft or void invoice as paid" };
+  }
+
+  await adminDb()
+    .doc(`organizations/${org.id}/invoices/${invoiceId}`)
+    .set(
+      { amountPaidCents: invoice.totalCents, balanceCents: 0, updatedAt: new Date().toISOString() },
+      { merge: true },
+    );
+
+  revalidatePath("/invoices");
+  revalidatePath(`/invoices/${invoiceId}`);
+  return { ok: true };
+}
+
+export async function markUnpaid(invoiceId: string): Promise<ActionResult> {
+  const { org } = await requireCurrentOrg();
+  const invoice = await getInvoice(org.id, invoiceId);
+  if (!invoice) return { ok: false, error: "Invoice not found" };
+  if (invoice.status === "draft" || invoice.status === "void") {
+    return { ok: false, error: "Cannot change status of a draft or void invoice" };
+  }
+
+  await adminDb()
+    .doc(`organizations/${org.id}/invoices/${invoiceId}`)
+    .set(
+      { amountPaidCents: 0, balanceCents: invoice.totalCents, updatedAt: new Date().toISOString() },
+      { merge: true },
+    );
+
+  revalidatePath("/invoices");
+  revalidatePath(`/invoices/${invoiceId}`);
+  return { ok: true };
+}
+
+export async function bulkSetStatus(
+  invoiceIds: string[],
+  newStatus: "paid" | "unpaid",
+): Promise<ActionResult> {
+  const { org } = await requireCurrentOrg();
+  const now = new Date().toISOString();
+
+  for (const invoiceId of invoiceIds) {
+    const invoice = await getInvoice(org.id, invoiceId);
+    if (!invoice) continue;
+    if (invoice.status === "draft" || invoice.status === "void") continue;
+
+    const amountPaidCents = newStatus === "paid" ? invoice.totalCents : 0;
+    const balanceCents = newStatus === "paid" ? 0 : invoice.totalCents;
+
+    await adminDb()
+      .doc(`organizations/${org.id}/invoices/${invoiceId}`)
+      .set({ amountPaidCents, balanceCents, updatedAt: now }, { merge: true });
+  }
+
+  revalidatePath("/invoices");
+  return { ok: true };
+}
+
 /** Delete a draft. Only ever a draft: issued invoices are voided instead. */
 export async function deleteDraft(invoiceId: string): Promise<ActionResult> {
   const { org } = await requireCurrentOrg();

@@ -1,10 +1,9 @@
 import Link from "next/link";
 
 import { AppShell } from "@/components/app-shell";
+import { InvoiceList } from "@/components/invoice-list";
 import { requireCurrentOrg } from "@/lib/auth";
 import { listClients, listInvoices } from "@/lib/data";
-import { formatDate } from "@/lib/dates";
-import { STATUS_LABELS, STATUS_STYLES } from "@/lib/invoice-status";
 import { formatMoney } from "@/lib/money";
 
 export const metadata = { title: "Invoices · InvoiceBro" };
@@ -59,84 +58,7 @@ export default async function InvoicesPage() {
           action={{ href: "/invoices/new", label: "New invoice" }}
         />
       ) : (
-        <>
-          {/* Cards below sm. A six-column table on a 390px screen either
-              overflows horizontally or squeezes every column to unreadable —
-              the same data reads better stacked. */}
-          <ul className="space-y-2 sm:hidden">
-            {invoices.map((invoice) => (
-              <li key={invoice.id}>
-                <Link
-                  href={`/invoices/${invoice.id}`}
-                  className="block rounded-xl border border-slate-200 bg-white p-4 active:bg-slate-50"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate font-medium text-slate-900">
-                        {invoice.client.name}
-                      </p>
-                      <p className="mt-0.5 text-xs text-slate-500">
-                        {invoice.number ?? "Draft"} · due {formatDate(invoice.dueDate)}
-                      </p>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <p className="font-medium tabular-nums text-slate-900">
-                        {formatMoney(invoice.totalCents, invoice.currency)}
-                      </p>
-                      <span
-                        className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${STATUS_STYLES[invoice.status]}`}
-                      >
-                        {STATUS_LABELS[invoice.status]}
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-
-          <div className="hidden overflow-hidden rounded-xl border border-slate-200 bg-white sm:block">
-          <table className="w-full text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-left">
-              <tr className="text-xs uppercase tracking-wide text-slate-500">
-                <th className="px-4 py-3 font-medium">Number</th>
-                <th className="px-4 py-3 font-medium">Client</th>
-                <th className="px-4 py-3 font-medium">Issued</th>
-                <th className="px-4 py-3 font-medium">Due</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 text-right font-medium">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {invoices.map((invoice) => (
-                <tr key={invoice.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/invoices/${invoice.id}`}
-                      className="font-medium text-blue-700 hover:underline"
-                    >
-                      {invoice.number ?? "Draft"}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3">{invoice.client.name}</td>
-                  <td className="px-4 py-3 text-slate-500">{formatDate(invoice.issueDate)}</td>
-                  <td className="px-4 py-3 text-slate-500">{formatDate(invoice.dueDate)}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${STATUS_STYLES[invoice.status]}`}
-                    >
-                      {STATUS_LABELS[invoice.status]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right font-medium tabular-nums">
-                    {formatMoney(invoice.totalCents, invoice.currency)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          </div>
-        </>
+        <InvoiceList invoices={invoices} currency={org.defaults.currency} />
       )}
     </AppShell>
   );

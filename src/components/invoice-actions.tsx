@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
-import { deleteDraft, issueInvoice, voidInvoice } from "@/app/actions/invoices";
+import { deleteDraft, issueInvoice, markPaid, markUnpaid, voidInvoice } from "@/app/actions/invoices";
 import type { Invoice } from "@/lib/types";
 
 export function InvoiceActions({
@@ -69,6 +69,28 @@ export function InvoiceActions({
           >
             {pending ? "Issuing…" : "Issue invoice"}
           </button>
+        ) : null}
+
+        {invoice.status !== "draft" && invoice.status !== "void" ? (
+          invoice.status === "paid" ? (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => run(() => markUnpaid(invoice.id))}
+              className="col-span-2 min-h-11 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100 disabled:opacity-60 sm:col-span-1"
+            >
+              Mark unpaid
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => run(() => markPaid(invoice.id))}
+              className="col-span-2 min-h-11 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-60 sm:col-span-1"
+            >
+              Mark paid
+            </button>
+          )
         ) : null}
 
         {invoice.status === "draft" ? (

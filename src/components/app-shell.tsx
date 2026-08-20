@@ -6,6 +6,7 @@ import type { Organization, SessionLike } from "@/components/types";
 const NAV = [
   { href: "/invoices", label: "Invoices", icon: InvoiceIcon },
   { href: "/clients", label: "Clients", icon: ClientsIcon },
+  { href: "/metrics", label: "Metrics", icon: MetricsIcon },
   { href: "/settings/organization", label: "Settings", icon: SettingsIcon },
 ];
 
@@ -107,6 +108,14 @@ function ClientsIcon() {
   return (
     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M15 20v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1M12 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0ZM22 20v-1a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+
+function MetricsIcon() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v18h18M7 16l4-4 4 4 5-6" />
     </svg>
   );
 }

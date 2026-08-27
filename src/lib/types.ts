@@ -117,6 +117,17 @@ export type Invoice = {
   updatedAt: string;
 };
 
+export type ArchivedInvoice = {
+  id: string;
+  fileName: string;
+  storagePath: string;
+  contentType: string;
+  sizeBytes: number;
+  detectedDate: string | null;
+  notes: string;
+  createdAt: string;
+};
+
 export type UserProfile = {
   uid: string;
   email: string;

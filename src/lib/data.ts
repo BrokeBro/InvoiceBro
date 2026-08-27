@@ -2,7 +2,7 @@ import "server-only";
 
 import { adminDb } from "@/lib/firebase/admin";
 import { withDerivedStatus } from "@/lib/invoice-status";
-import type { Client, Invoice, Organization } from "@/lib/types";
+import type { ArchivedInvoice, Client, Invoice, Organization } from "@/lib/types";
 
 // Read helpers. Every one of these takes an orgId that the caller has already
 // validated with requireOrg() — they do not check membership themselves, so
@@ -103,6 +103,39 @@ export async function reserveInvoiceNumber(orgId: string): Promise<string> {
 
     return `${prefix}${String(next).padStart(padding, "0")}`;
   });
+}
+
+export async function listArchivedInvoices(orgId: string): Promise<ArchivedInvoice[]> {
+  const snapshot = await adminDb()
+    .collection(`organizations/${orgId}/archivedInvoices`)
+    .orderBy("createdAt", "desc")
+    .limit(500)
+    .get();
+
+  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as ArchivedInvoice));
+}
+
+export async function getArchivedInvoice(
+  orgId: string,
+  archiveId: string,
+): Promise<ArchivedInvoice | null> {
+  const snapshot = await adminDb()
+    .doc(`organizations/${orgId}/archivedInvoices/${archiveId}`)
+    .get();
+  if (!snapshot.exists) return null;
+  return { id: snapshot.id, ...snapshot.data() } as ArchivedInvoice;
+}
+
+export async function getSignedUrl(storagePath: string): Promise<string | null> {
+  try {
+    const { adminBucket } = await import("@/lib/firebase/admin");
+    const [url] = await adminBucket()
+      .file(storagePath)
+      .getSignedUrl({ action: "read", expires: Date.now() + 60 * 60 * 1000 });
+    return url;
+  } catch {
+    return null;
+  }
 }
 
 /** A short-lived signed URL for an org logo, or null if there isn't one. */

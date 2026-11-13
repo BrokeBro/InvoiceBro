@@ -7,7 +7,7 @@ import { ClassicTemplate } from "@/lib/pdf/templates/classic";
 import { ModernTemplate } from "@/lib/pdf/templates/modern";
 import { MinimalTemplate } from "@/lib/pdf/templates/minimal";
 import type { PdfDocumentProps } from "@/lib/pdf/types";
-import type { Invoice, Organization, TemplateId } from "@/lib/types";
+import type { Invoice, InvoiceObservation, Organization, TemplateId } from "@/lib/types";
 
 const TEMPLATES: Record<TemplateId, (props: PdfDocumentProps) => React.ReactElement> = {
   classic: ClassicTemplate,
@@ -34,6 +34,7 @@ export async function renderInvoicePdf(props: {
   invoice: Invoice;
   organization: Organization;
   logoUrl: string | null;
+  observations?: InvoiceObservation[];
 }): Promise<Buffer> {
   const templateId = resolveTemplate(props.invoice, props.organization);
   const Template = TEMPLATES[templateId];
@@ -45,6 +46,7 @@ export async function renderInvoicePdf(props: {
     organization: props.organization,
     logoUrl: props.logoUrl,
     accentColor,
+    observations: props.observations,
   });
 
   // Each template returns a <Document>, but TypeScript only sees the component's

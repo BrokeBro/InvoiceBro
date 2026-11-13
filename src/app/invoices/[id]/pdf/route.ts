@@ -1,5 +1,5 @@
 import { requireCurrentOrg } from "@/lib/auth";
-import { getInvoice, getLogoUrl } from "@/lib/data";
+import { getInvoice, getLogoUrl, listInvoiceObservations } from "@/lib/data";
 import { pdfFilename, renderInvoicePdf } from "@/lib/pdf/render";
 
 // @react-pdf/renderer and firebase-admin both need Node APIs — never Edge.
@@ -24,10 +24,14 @@ export async function GET(
     return new Response("Invoice not found", { status: 404 });
   }
 
-  const logoUrl = await getLogoUrl(org.logoPath);
+  const [logoUrl, allObservations] = await Promise.all([
+    getLogoUrl(org.logoPath),
+    listInvoiceObservations(org.id, id),
+  ]);
+  const observations = allObservations.filter((o) => o.includeInPdf);
 
   try {
-    const pdf = await renderInvoicePdf({ invoice, organization: org, logoUrl });
+    const pdf = await renderInvoicePdf({ invoice, organization: org, logoUrl, observations });
     const filename = pdfFilename(invoice, org);
 
     // `inline` previews in a browser tab; `attachment` forces a save. The

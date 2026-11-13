@@ -85,6 +85,7 @@ export async function addObservation(
     templateId?: string;
     responses?: Record<string, string>;
     note?: string;
+    includeInPdf?: boolean;
   };
   try {
     payload = JSON.parse(raw);
@@ -100,6 +101,7 @@ export async function addObservation(
 
   const responses = payload.responses ?? {};
   const note = (payload.note ?? "").trim();
+  const includeInPdf = payload.includeInPdf ?? false;
 
   const now = new Date().toISOString();
   const created = await adminDb()
@@ -109,11 +111,31 @@ export async function addObservation(
       templateName: template.name,
       responses,
       note,
+      includeInPdf,
       createdAt: now,
     });
 
   revalidatePath(`/invoices/${invoiceId}`);
   return { ok: true, id: created.id };
+}
+
+export async function toggleObservationInPdf(
+  invoiceId: string,
+  observationId: string,
+): Promise<Result> {
+  const { org } = await requireCurrentOrg();
+
+  const ref = adminDb().doc(
+    `organizations/${org.id}/invoices/${invoiceId}/observations/${observationId}`,
+  );
+  const snapshot = await ref.get();
+  if (!snapshot.exists) return { ok: false, error: "Observation not found" };
+
+  const current = snapshot.data()?.includeInPdf ?? false;
+  await ref.set({ includeInPdf: !current }, { merge: true });
+
+  revalidatePath(`/invoices/${invoiceId}`);
+  return { ok: true };
 }
 
 export async function deleteObservation(

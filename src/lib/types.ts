@@ -139,6 +139,7 @@ export type InvoiceObservation = {
   templateName: string;
   responses: Record<string, string>;
   note: string;
+  includeInPdf: boolean;
   createdAt: string;
 };
 

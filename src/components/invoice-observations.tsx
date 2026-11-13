@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
-import { addObservation, deleteObservation } from "@/app/actions/observations";
+import { addObservation, deleteObservation, toggleObservationInPdf } from "@/app/actions/observations";
 import type { InvoiceObservation, ObservationTemplate } from "@/lib/types";
 
 export function InvoiceObservations({
@@ -84,6 +84,7 @@ function ObservationForm({
   const [selectedId, setSelectedId] = useState(templates[0]?.id ?? "");
   const [responses, setResponses] = useState<Record<string, string>>({});
   const [note, setNote] = useState("");
+  const [includeInPdf, setIncludeInPdf] = useState(false);
 
   const template = templates.find((t) => t.id === selectedId);
 
@@ -97,7 +98,7 @@ function ObservationForm({
     const fd = new FormData();
     fd.set(
       "payload",
-      JSON.stringify({ templateId: selectedId, responses, note }),
+      JSON.stringify({ templateId: selectedId, responses, note, includeInPdf }),
     );
 
     startTransition(async () => {
@@ -173,6 +174,16 @@ function ObservationForm({
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
+
+          <label className="flex items-center gap-2 pt-1">
+            <input
+              type="checkbox"
+              checked={includeInPdf}
+              onChange={(e) => setIncludeInPdf(e.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span className="text-sm text-slate-700">Include in invoice PDF</span>
+          </label>
         </div>
       ) : null}
 
@@ -214,22 +225,46 @@ function ObservationCard({
     });
   }
 
+  function handleTogglePdf() {
+    startTransition(async () => {
+      await toggleObservationInPdf(invoiceId, observation.id);
+      router.refresh();
+    });
+  }
+
   const entries = Object.entries(observation.responses);
 
   return (
     <li className="rounded-xl border border-slate-200 bg-white p-4">
       <div className="mb-2 flex items-start justify-between">
-        <p className="text-sm font-medium text-slate-900">
-          {observation.templateName}
-        </p>
-        <button
-          type="button"
-          disabled={pending}
-          onClick={handleDelete}
-          className="text-xs text-slate-400 transition hover:text-red-600 disabled:opacity-60"
-        >
-          Delete
-        </button>
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium text-slate-900">
+            {observation.templateName}
+          </p>
+          {observation.includeInPdf ? (
+            <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-600 ring-1 ring-inset ring-blue-200">
+              In PDF
+            </span>
+          ) : null}
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <button
+            type="button"
+            disabled={pending}
+            onClick={handleTogglePdf}
+            className="text-xs text-slate-500 transition hover:text-blue-600 disabled:opacity-60"
+          >
+            {observation.includeInPdf ? "Remove from PDF" : "Include in PDF"}
+          </button>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={handleDelete}
+            className="text-xs text-slate-400 transition hover:text-red-600 disabled:opacity-60"
+          >
+            Delete
+          </button>
+        </div>
       </div>
 
       {entries.length > 0 ? (

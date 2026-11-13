@@ -1,4 +1,4 @@
-import type { Invoice, Organization } from "@/lib/types";
+import type { Invoice, InvoiceObservation, Organization } from "@/lib/types";
 
 /** Everything a template needs, resolved ahead of render. */
 export type PdfDocumentProps = {
@@ -7,4 +7,5 @@ export type PdfDocumentProps = {
   /** Signed URL, resolved server-side. Null when there's no logo. */
   logoUrl: string | null;
   accentColor: string;
+  observations?: InvoiceObservation[];
 };

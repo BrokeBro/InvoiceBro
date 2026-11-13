@@ -125,6 +125,7 @@ export function ClassicTemplate({
   organization,
   logoUrl,
   accentColor,
+  observations,
 }: PdfDocumentProps) {
   const money = (cents: number) => formatMoney(cents, invoice.currency);
   const balanceDue = invoice.totalCents - invoice.amountPaidCents;
@@ -252,6 +253,27 @@ export function ClassicTemplate({
           <View style={{ marginTop: 14 }} wrap={false}>
             <Text style={styles.notesLabel}>TERMS</Text>
             <Text style={styles.notesBody}>{invoice.terms}</Text>
+          </View>
+        ) : null}
+
+        {observations && observations.length > 0 ? (
+          <View style={{ marginTop: 14 }} wrap={false}>
+            <Text style={styles.notesLabel}>OBSERVATIONS</Text>
+            {observations.map((obs, i) => (
+              <View key={i} style={{ marginTop: i > 0 ? 8 : 2 }}>
+                <Text style={{ fontFamily: FONT.bold, fontSize: SIZE.small, color: INK.strong }}>
+                  {obs.templateName}
+                </Text>
+                {Object.entries(obs.responses).map(([label, value]) => (
+                  <Text key={label} style={styles.notesBody}>
+                    {label}: {value}
+                  </Text>
+                ))}
+                {obs.note ? (
+                  <Text style={[styles.notesBody, { marginTop: 2 }]}>{obs.note}</Text>
+                ) : null}
+              </View>
+            ))}
           </View>
         ) : null}
 

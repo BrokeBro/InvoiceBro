@@ -141,7 +141,10 @@ export async function listInvoiceObservations(
     .orderBy("createdAt", "desc")
     .get();
 
-  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as InvoiceObservation));
+  return snapshot.docs.map((doc) => {
+    const data = doc.data();
+    return { id: doc.id, ...data, includeInPdf: data.includeInPdf ?? false } as InvoiceObservation;
+  });
 }
 
 export async function listArchivedInvoices(orgId: string): Promise<ArchivedInvoice[]> {

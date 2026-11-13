@@ -230,10 +230,10 @@ export function MinimalTemplate({
         ) : null}
 
         {observations && observations.length > 0 ? (
-          <View style={{ marginTop: 14 }} wrap={false}>
+          <View style={{ marginTop: 14 }}>
             <Text style={styles.label}>OBSERVATIONS</Text>
             {observations.map((obs, i) => (
-              <View key={i} style={{ marginTop: i > 0 ? 8 : 2 }}>
+              <View key={i} style={{ marginTop: i > 0 ? 8 : 2 }} wrap={false}>
                 <Text style={{ fontFamily: FONT.bold, fontSize: SIZE.small, color: INK.strong }}>
                   {obs.templateName}
                 </Text>

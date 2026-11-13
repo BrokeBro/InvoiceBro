@@ -2,7 +2,14 @@ import "server-only";
 
 import { adminDb } from "@/lib/firebase/admin";
 import { withDerivedStatus } from "@/lib/invoice-status";
-import type { ArchivedInvoice, Client, Invoice, Organization } from "@/lib/types";
+import type {
+  ArchivedInvoice,
+  Client,
+  InvoiceObservation,
+  Invoice,
+  ObservationTemplate,
+  Organization,
+} from "@/lib/types";
 
 // Read helpers. Every one of these takes an orgId that the caller has already
 // validated with requireOrg() — they do not check membership themselves, so
@@ -103,6 +110,38 @@ export async function reserveInvoiceNumber(orgId: string): Promise<string> {
 
     return `${prefix}${String(next).padStart(padding, "0")}`;
   });
+}
+
+export async function listObservationTemplates(orgId: string): Promise<ObservationTemplate[]> {
+  const snapshot = await adminDb()
+    .collection(`organizations/${orgId}/observationTemplates`)
+    .orderBy("createdAt", "desc")
+    .get();
+
+  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as ObservationTemplate));
+}
+
+export async function getObservationTemplate(
+  orgId: string,
+  templateId: string,
+): Promise<ObservationTemplate | null> {
+  const snapshot = await adminDb()
+    .doc(`organizations/${orgId}/observationTemplates/${templateId}`)
+    .get();
+  if (!snapshot.exists) return null;
+  return { id: snapshot.id, ...snapshot.data() } as ObservationTemplate;
+}
+
+export async function listInvoiceObservations(
+  orgId: string,
+  invoiceId: string,
+): Promise<InvoiceObservation[]> {
+  const snapshot = await adminDb()
+    .collection(`organizations/${orgId}/invoices/${invoiceId}/observations`)
+    .orderBy("createdAt", "desc")
+    .get();
+
+  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as InvoiceObservation));
 }
 
 export async function listArchivedInvoices(orgId: string): Promise<ArchivedInvoice[]> {

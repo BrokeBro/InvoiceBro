@@ -117,6 +117,31 @@ export type Invoice = {
   updatedAt: string;
 };
 
+/** A single field in an observation template — a label with radio-button options. */
+export type ObservationField = {
+  label: string;
+  options: string[];
+};
+
+/** A reusable observation template (e.g. "End-of-tenancy check"). */
+export type ObservationTemplate = {
+  id: string;
+  name: string;
+  fields: ObservationField[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** A filled-in observation attached to an invoice. */
+export type InvoiceObservation = {
+  id: string;
+  templateId: string;
+  templateName: string;
+  responses: Record<string, string>;
+  note: string;
+  createdAt: string;
+};
+
 export type ArchivedInvoice = {
   id: string;
   fileName: string;

@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
 import { InvoiceActions } from "@/components/invoice-actions";
+import { InvoiceObservations } from "@/components/invoice-observations";
 import { requireCurrentOrg } from "@/lib/auth";
-import { getInvoice } from "@/lib/data";
+import { getInvoice, listInvoiceObservations, listObservationTemplates } from "@/lib/data";
 import { formatDate } from "@/lib/dates";
 import { STATUS_LABELS, STATUS_STYLES } from "@/lib/invoice-status";
 import { formatMoney, lineSubtotalCents } from "@/lib/money";
@@ -22,6 +23,11 @@ export default async function InvoiceDetailPage({
 
   const invoice = await getInvoice(org.id, id);
   if (!invoice) notFound();
+
+  const [observations, observationTemplates] = await Promise.all([
+    listInvoiceObservations(org.id, id),
+    listObservationTemplates(org.id),
+  ]);
 
   const money = (cents: number) => formatMoney(cents, invoice.currency);
   const template = resolveTemplate(invoice, org);
@@ -177,6 +183,12 @@ export default async function InvoiceDetailPage({
           ) : null}
         </aside>
       </div>
+
+      <InvoiceObservations
+        invoiceId={id}
+        observations={observations}
+        templates={observationTemplates}
+      />
 
       <div className="mt-8">
         <Link href="/invoices" className="text-sm text-slate-500 hover:text-slate-900">

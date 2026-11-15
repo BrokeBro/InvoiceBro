@@ -109,6 +109,10 @@ export async function uploadArchivedInvoice(formData: FormData): Promise<ActionR
     return { ok: true, id: docRef.id };
   } catch (err) {
     console.error("Archive upload failed", err);
+    const msg = err instanceof Error ? err.message : "";
+    if (msg.includes("bucket does not exist")) {
+      return { ok: false, error: "Firebase Storage bucket not found — check NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET and enable Storage in the Firebase console" };
+    }
     return { ok: false, error: "Upload failed — please try again" };
   }
 }

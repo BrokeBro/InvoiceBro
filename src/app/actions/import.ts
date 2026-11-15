@@ -178,6 +178,10 @@ export async function saveImportedInvoice(
   return { ok: true, data: { invoiceId: invoiceRef.id } };
   } catch (err) {
     console.error("Import save failed", err);
+    const msg = err instanceof Error ? err.message : "";
+    if (msg.includes("bucket does not exist")) {
+      return { ok: false, error: "Firebase Storage bucket not found — check NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET and enable Storage in the Firebase console" };
+    }
     return { ok: false, error: "Failed to save the invoice — please try again" };
   }
 }

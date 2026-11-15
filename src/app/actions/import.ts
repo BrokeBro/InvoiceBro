@@ -79,6 +79,7 @@ export async function saveImportedInvoice(
     return { ok: false, error: "At least one line item is required" };
   }
 
+  try {
   const db = adminDb();
   const now = new Date().toISOString();
 
@@ -175,4 +176,8 @@ export async function saveImportedInvoice(
   revalidatePath("/archive");
   revalidatePath("/clients");
   return { ok: true, data: { invoiceId: invoiceRef.id } };
+  } catch (err) {
+    console.error("Import save failed", err);
+    return { ok: false, error: "Failed to save the invoice — please try again" };
+  }
 }

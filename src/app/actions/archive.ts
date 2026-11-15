@@ -86,26 +86,31 @@ export async function uploadArchivedInvoice(formData: FormData): Promise<ActionR
   const manualDate = (formData.get("detectedDate") as string) || null;
   const detectedDate = manualDate || detectDateFromFilename(file.name);
 
-  const collection = adminDb().collection(`organizations/${org.id}/archivedInvoices`);
-  const docRef = collection.doc();
+  try {
+    const collection = adminDb().collection(`organizations/${org.id}/archivedInvoices`);
+    const docRef = collection.doc();
 
-  const ext = file.name.split(".").pop() ?? "bin";
-  const storagePath = `organizations/${org.id}/archive/${docRef.id}.${ext}`;
-  const buffer = Buffer.from(await file.arrayBuffer());
-  await adminBucket().file(storagePath).save(buffer, { contentType: file.type });
+    const ext = file.name.split(".").pop() ?? "bin";
+    const storagePath = `organizations/${org.id}/archive/${docRef.id}.${ext}`;
+    const buffer = Buffer.from(await file.arrayBuffer());
+    await adminBucket().file(storagePath).save(buffer, { contentType: file.type });
 
-  await docRef.set({
-    fileName: file.name,
-    storagePath,
-    contentType: file.type,
-    sizeBytes: file.size,
-    detectedDate,
-    notes,
-    createdAt: new Date().toISOString(),
-  });
+    await docRef.set({
+      fileName: file.name,
+      storagePath,
+      contentType: file.type,
+      sizeBytes: file.size,
+      detectedDate,
+      notes,
+      createdAt: new Date().toISOString(),
+    });
 
-  revalidatePath("/archive");
-  return { ok: true, id: docRef.id };
+    revalidatePath("/archive");
+    return { ok: true, id: docRef.id };
+  } catch (err) {
+    console.error("Archive upload failed", err);
+    return { ok: false, error: "Upload failed — please try again" };
+  }
 }
 
 export async function deleteArchivedInvoice(archiveId: string): Promise<ActionResult> {

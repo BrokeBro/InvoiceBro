@@ -37,13 +37,17 @@ export function InvoiceImporter({
             const fd = new FormData();
             fd.set("file", f);
             startTransition(async () => {
-              const result = await parseImportedInvoice(fd);
-              if (!result.ok) {
-                setError(result.error);
-                return;
+              try {
+                const result = await parseImportedInvoice(fd);
+                if (!result.ok) {
+                  setError(result.error);
+                  return;
+                }
+                setParsed(result.data);
+                setStep("review");
+              } catch {
+                setError("Something went wrong — please try again");
               }
-              setParsed(result.data);
-              setStep("review");
             });
           }}
         />
@@ -61,13 +65,17 @@ export function InvoiceImporter({
             fd.set("payload", JSON.stringify(payload));
             if (originalFile) fd.set("file", originalFile);
             startTransition(async () => {
-              const result = await saveImportedInvoice(fd);
-              if (!result.ok) {
-                setError(result.error);
-                return;
+              try {
+                const result = await saveImportedInvoice(fd);
+                if (!result.ok) {
+                  setError(result.error);
+                  return;
+                }
+                setCreatedId(result.data.invoiceId);
+                setStep("done");
+              } catch {
+                setError("Something went wrong — please try again");
               }
-              setCreatedId(result.data.invoiceId);
-              setStep("done");
             });
           }}
           onBack={() => {

@@ -64,27 +64,31 @@ export function ArchiveManager({
     if (fileArr.length === 0) return;
 
     startTransition(async () => {
-      let uploaded = 0;
-      let lastError = "";
-      for (const file of fileArr) {
-        const fd = new FormData();
-        fd.set("file", file);
-        const result = await uploadArchivedInvoice(fd);
-        if (result.ok) {
-          uploaded++;
-        } else {
-          lastError = result.error;
+      try {
+        let uploaded = 0;
+        let lastError = "";
+        for (const file of fileArr) {
+          const fd = new FormData();
+          fd.set("file", file);
+          const result = await uploadArchivedInvoice(fd);
+          if (result.ok) {
+            uploaded++;
+          } else {
+            lastError = result.error;
+          }
         }
-      }
 
-      if (uploaded > 0) {
-        setMessage({
-          ok: true,
-          text: `${uploaded} file${uploaded > 1 ? "s" : ""} uploaded.`,
-        });
-        router.refresh();
-      } else {
-        setMessage({ ok: false, text: lastError || "Upload failed" });
+        if (uploaded > 0) {
+          setMessage({
+            ok: true,
+            text: `${uploaded} file${uploaded > 1 ? "s" : ""} uploaded.`,
+          });
+          router.refresh();
+        } else {
+          setMessage({ ok: false, text: lastError || "Upload failed" });
+        }
+      } catch {
+        setMessage({ ok: false, text: "Upload failed — please try again" });
       }
     });
   }

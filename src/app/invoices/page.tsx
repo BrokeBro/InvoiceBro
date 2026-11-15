@@ -35,14 +35,22 @@ export default async function InvoicesPage() {
           </p>
         </div>
 
-        {clients.length > 0 ? (
+        <div className="flex gap-2">
           <Link
-            href="/invoices/new"
-            className="flex min-h-11 items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 sm:w-auto"
+            href="/invoices/import"
+            className="flex min-h-11 items-center justify-center rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 sm:w-auto"
           >
-            New invoice
+            Import
           </Link>
-        ) : null}
+          {clients.length > 0 ? (
+            <Link
+              href="/invoices/new"
+              className="flex min-h-11 items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 sm:w-auto"
+            >
+              New invoice
+            </Link>
+          ) : null}
+        </div>
       </div>
 
       {clients.length === 0 ? (

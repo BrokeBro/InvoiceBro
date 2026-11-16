@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ["pdfjs-dist"],
   rewrites: async () => [
     // Proxy Firebase's auth handler through our own domain so
     // signInWithRedirect works on Safari. Without this, Safari's ITP

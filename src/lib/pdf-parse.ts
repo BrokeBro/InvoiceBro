@@ -1,7 +1,16 @@
 import "server-only";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-expect-error -- no declarations for the worker bundle
+import * as pdfjsWorker from "pdfjs-dist/legacy/build/pdf.worker.mjs";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import type { TextItem } from "pdfjs-dist/types/src/display/api";
+
+// Pre-register the worker on globalThis so pdfjs-dist uses it directly
+// instead of trying to dynamically import pdf.worker.mjs (which fails on Vercel).
+if (!("pdfjsWorker" in globalThis)) {
+  Object.assign(globalThis, { pdfjsWorker });
+}
 
 export async function extractTextFromPdf(buffer: Buffer): Promise<string> {
   const data = new Uint8Array(buffer);
